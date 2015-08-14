@@ -22,7 +22,7 @@ public class InputMethod extends InputMethodService
     private final int PREDICTION1 = -101,PREDICTION2 = -102,PREDICTION3 = -103,
                         CAPSLOCK = -104, SWITCHKEYBOARD = -105;
     private int keyboardType = 0;
-
+    private String kikoo="kikoo !!";
     private boolean caps = false, capsLock = false;
 
     @Override
