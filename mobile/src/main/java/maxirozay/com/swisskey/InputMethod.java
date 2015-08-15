@@ -1,9 +1,11 @@
 package maxirozay.com.swisskey;
 
+import android.annotation.TargetApi;
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.media.AudioManager;
+import android.os.Build;
 import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
@@ -14,20 +16,22 @@ import android.view.inputmethod.InputConnection;
  * Created by Maxime Rossier on 13.08.2015.
  */
 public class InputMethod extends InputMethodService
-        implements KeyboardView.OnKeyboardActionListener {
+        implements KeyboardView.OnKeyboardActionListener, View.OnClickListener {
 
-    private KeyboardView kv;
+    private CustomKeyboardView kv;
     private Keyboard keyboard;
-    private String currentWord = "";
     private final int PREDICTION1 = -101,PREDICTION2 = -102,PREDICTION3 = -103,
-                        CAPSLOCK = -104, SWITCHKEYBOARD = -105;
-    private int keyboardType = 0;
+            CAPSLOCK = -104,
+            ALPHABETKEYBOARD = -105, ALTKEYBOARD = -106, EMOJIKEYBOARD = -107;
+    private int keyboardType = ALPHABETKEYBOARD;
 
     private boolean caps = false, capsLock = false;
+    private EmojiManager emojiManager;
 
     @Override
     public void onStartInput(EditorInfo attribute, boolean restarting) {
         super.onStartInput(attribute, restarting);
+        emojiManager = new EmojiManager();
         switch (attribute.inputType & InputType.TYPE_MASK_CLASS) {
             case InputType.TYPE_CLASS_NUMBER:
             case InputType.TYPE_CLASS_DATETIME:
@@ -45,40 +49,43 @@ public class InputMethod extends InputMethodService
                 keyboard = new Keyboard(this, R.xml.qwertz);
         }
         if (kv != null)
-            kv.setKeyboard(keyboard);
+            kv.getKeyboardView().setKeyboard(keyboard);
     }
 
     @Override
     public View onCreateInputView() {
-        kv = (KeyboardView)getLayoutInflater().inflate(R.layout.keyboard, null);
-
-        kv.setKeyboard(keyboard);
-        kv.setOnKeyboardActionListener(this);
+        kv = (CustomKeyboardView)getLayoutInflater().inflate(R.layout.keyboard, null);
+        kv.buildEmojiLayout();
+        kv.getKeyboardView().setKeyboard(keyboard);
+        kv.getKeyboardView().setOnKeyboardActionListener(this);
+        kv.getBackToAlphabet().setOnClickListener(this);
         return kv;
     }
 
 
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onKey(int primaryCode, int[] keyCodes) {
 
         InputConnection ic = getCurrentInputConnection();
         playClick(primaryCode);
+        String last30Char;
+        String[] lastWords;
         switch(primaryCode) {
-
             case Keyboard.KEYCODE_SHIFT:
                 capsLock = false;
-                keyboard.getKeys().get(33).icon = getDrawable(R.drawable.caps);
+                keyboard.getKeys().get(33).icon = getDrawable(R.drawable.sym_keyboard_shift);
                 caps = !caps;
                 keyboard.setShifted(caps);
-                kv.invalidateAllKeys();
-                break;
-            case CAPSLOCK:
-                this.keyboard.getKeys().get(33).icon = getDrawable(R.drawable.capslock);
-                capsLock = true;
+                kv.getKeyboardView().invalidateAllKeys();
                 break;
             case Keyboard.KEYCODE_DONE:
                 ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+                break;
+            case CAPSLOCK:
+                keyboard.getKeys().get(33).icon = getDrawable(R.drawable.sym_keyboard_shift_locked);
+                capsLock = true;
                 break;
             case PREDICTION1:
                 ic.commitText(this.keyboard.getKeys().get(0).label, 1);
@@ -89,44 +96,50 @@ public class InputMethod extends InputMethodService
             case PREDICTION3:
                 ic.commitText(this.keyboard.getKeys().get(2).label, 1);
                 break;
-            case SWITCHKEYBOARD:
-                if (keyboardType == 0) {
-                    keyboard = new Keyboard(this, R.xml.alt_keyboard);
-                    keyboardType = 1;
-                }
-                else {
-                    keyboard = new Keyboard(this, R.xml.qwertz);
-                    keyboardType = 0;
-                }
-                kv.setKeyboard(keyboard);
+            case ALPHABETKEYBOARD:
+                changeKeyboard(ALPHABETKEYBOARD);
+                break;
+            case ALTKEYBOARD:
+                changeKeyboard(ALTKEYBOARD);
+                break;
+            case EMOJIKEYBOARD:
+                changeKeyboard(EMOJIKEYBOARD);
                 break;
             case Keyboard.KEYCODE_DELETE:
                 ic.deleteSurroundingText(1, 0);
-                break;
             default:
-                char code = (char) primaryCode;
-                if (Character.isLetter(code) && caps) {
-                    code = Character.toUpperCase(code);
-                }
-                ic.commitText(String.valueOf(code), 1);
-                if (!capsLock) {
-                    caps = false;
-                    keyboard.setShifted(caps);
-                }
-                if (keyboardType == 0) {
-                    if (primaryCode == 32) {
-                        keyboard.getKeys().get(2).label = " ";
-                    } else {
-                        String[] last30Char;
-                        last30Char = ic.getTextBeforeCursor(30, InputConnection.GET_TEXT_WITH_STYLES).toString().split(" ");
-                        if (last30Char.length == 0)
-                            keyboard.getKeys().get(2).label = " ";
-                        else
-                            keyboard.getKeys().get(2).label = last30Char[last30Char.length - 1];
+                if (keyboardType != EMOJIKEYBOARD) {
+                    if (primaryCode == Keyboard.KEYCODE_DELETE){
+                        ic.deleteSurroundingText(1, 0);
                     }
-                    kv.invalidateKey(0);
-                    kv.invalidateKey(1);
-                    kv.invalidateKey(2);
+                    else {
+                        char code = (char) primaryCode;
+                        if (Character.isLetter(code) && caps) {
+                            code = Character.toUpperCase(code);
+                        }
+                        ic.commitText(String.valueOf(code), 1);
+                    }
+                    if (!capsLock) {
+                        caps = false;
+                        keyboard.setShifted(caps);
+                    }
+
+                    //update predictions
+                    if (keyboardType == ALPHABETKEYBOARD) {
+                        last30Char = ic.getTextBeforeCursor(30,
+                                InputConnection.GET_TEXT_WITH_STYLES).toString();
+                        lastWords = last30Char.split(" ");
+                        if (lastWords.length == 0)
+                            setPrediction(" ", false);
+                        else {
+                            Boolean isFocused = !last30Char.endsWith(" ");  //is focused on the word?
+                            setPrediction(lastWords[lastWords.length - 1], isFocused);
+                        }
+                    }
+
+                }
+                else {
+                    ic.commitText(keyboard.getKeys().get(0).label.toString(), 1);
                 }
         }
 
@@ -175,5 +188,45 @@ public class InputMethod extends InputMethodService
                 break;
             default: am.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD);
         }
+    }
+
+
+
+    @Override
+    public void onClick(View view) {
+        changeKeyboard(ALPHABETKEYBOARD);
+    }
+
+    public void changeKeyboard(int type) {
+        if (keyboardType == EMOJIKEYBOARD) {
+            kv.showKeyboard();
+            kv.scrollUp();
+        }
+        switch (type) {
+            case ALTKEYBOARD:
+                keyboard = new Keyboard(this, R.xml.alt_keyboard);
+                break;
+            case EMOJIKEYBOARD:
+                kv.showEmoji();
+                break;
+            case ALPHABETKEYBOARD:
+            default:
+                keyboard = new Keyboard(this, R.xml.qwertz);
+        }
+        keyboardType = type;
+        kv.getKeyboardView().setKeyboard(keyboard);
+    }
+
+    private void setPrediction(String word, Boolean isFocused) {
+        if (isFocused) {
+            keyboard.getKeys().get(2).label = word;
+        }
+        else {
+            keyboard.getKeys().get(1).label = word;
+            keyboard.getKeys().get(2).label = " ";
+        }
+        kv.getKeyboardView().invalidateKey(0);
+        kv.getKeyboardView().invalidateKey(1);
+        kv.getKeyboardView().invalidateKey(2);
     }
 }
