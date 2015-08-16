@@ -5,10 +5,15 @@ import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.media.AudioManager;
 import android.text.InputType;
+import android.util.*;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Created by Maxime Rossier on 13.08.2015.
@@ -28,6 +33,12 @@ public class InputMethod extends InputMethodService
     @Override
     public void onStartInput(EditorInfo attribute, boolean restarting) {
         super.onStartInput(attribute, restarting);
+        LoadDict dict= new LoadDict( getApplicationContext());
+        //dict.LoadFromFile("listeFR.txt");
+        //List<String> lstSms = new ArrayList<String>(dict.getAllSmsFromProvider());
+        List<SMSObject> lstSms = new ArrayList<SMSObject>(dict.readSMS());
+       // for(String element : lstSms)
+           // Log.d("contenuSMS",element);
         switch (attribute.inputType & InputType.TYPE_MASK_CLASS) {
             case InputType.TYPE_CLASS_NUMBER:
             case InputType.TYPE_CLASS_DATETIME:
