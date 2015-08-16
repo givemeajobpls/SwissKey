@@ -1,6 +1,7 @@
 package maxirozay.com.swisskey;
 
 import android.annotation.TargetApi;
+import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
@@ -11,6 +12,10 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.Button;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by Maxime Rossier on 13.08.2015.
@@ -26,12 +31,11 @@ public class InputMethod extends InputMethodService
     private int keyboardType = ALPHABETKEYBOARD;
 
     private boolean caps = false, capsLock = false;
-    private EmojiManager emojiManager;
+    private Set<String> recentEmojis = new HashSet<>();
 
     @Override
     public void onStartInput(EditorInfo attribute, boolean restarting) {
         super.onStartInput(attribute, restarting);
-        emojiManager = new EmojiManager();
         switch (attribute.inputType & InputType.TYPE_MASK_CLASS) {
             case InputType.TYPE_CLASS_NUMBER:
             case InputType.TYPE_CLASS_DATETIME:
@@ -55,14 +59,32 @@ public class InputMethod extends InputMethodService
     @Override
     public View onCreateInputView() {
         kv = (CustomKeyboardView)getLayoutInflater().inflate(R.layout.keyboard, null);
-        kv.buildEmojiLayout();
         kv.getKeyboardView().setKeyboard(keyboard);
         kv.getKeyboardView().setOnKeyboardActionListener(this);
-        kv.getBackToAlphabet().setOnClickListener(this);
+        kv.setOnClickListener(this);
+        for (int i = 0; i < kv.getButtons().length; i++)
+            kv.getButtons()[i].setOnClickListener(this);
+        kv.getDelButton().setOnClickListener(this);
+        kv.initEmojiGrid();
+        getSharedPref();
         return kv;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        setSharedPref();
+    }
 
+    public void setSharedPref() {
+        SharedPreferences.Editor editor = getSharedPreferences("SwissKey", MODE_PRIVATE).edit();
+        editor.putStringSet("recentEmoji", recentEmojis);
+        editor.commit();
+    }
+    public void getSharedPref() {
+        SharedPreferences preferences = getSharedPreferences("SwissKey", MODE_PRIVATE);
+        recentEmojis = preferences.getStringSet("recentEmoji", new HashSet<String>());
+    }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -105,12 +127,15 @@ public class InputMethod extends InputMethodService
             case EMOJIKEYBOARD:
                 changeKeyboard(EMOJIKEYBOARD);
                 break;
-            case Keyboard.KEYCODE_DELETE:
-                ic.deleteSurroundingText(1, 0);
             default:
                 if (keyboardType != EMOJIKEYBOARD) {
                     if (primaryCode == Keyboard.KEYCODE_DELETE){
-                        ic.deleteSurroundingText(1, 0);
+                        char last2Char = ic.getTextBeforeCursor(2,
+                                InputConnection.GET_TEXT_WITH_STYLES).charAt(0);
+                        if ((int)last2Char < 0xD83D)    //0xD83D is for 0x1F (beginning of an unicode for emoji)
+                            ic.deleteSurroundingText(1, 0);
+                        else
+                            ic.deleteSurroundingText(2, 0);
                     }
                     else {
                         char code = (char) primaryCode;
@@ -194,24 +219,53 @@ public class InputMethod extends InputMethodService
 
     @Override
     public void onClick(View view) {
-        changeKeyboard(ALPHABETKEYBOARD);
+        if (view.getId() == R.id.back_to_alphabet)
+            changeKeyboard(ALPHABETKEYBOARD);
+        else if (view.getId() == R.id.del) {
+            InputConnection ic = getCurrentInputConnection();
+            char last2Char = ic.getTextBeforeCursor(2,
+                    InputConnection.GET_TEXT_WITH_STYLES).charAt(0);
+            if ((int)last2Char < 0xD83D)    //0xD83D is for 0x1F (beginning of an unicode for emoji)
+                ic.deleteSurroundingText(1, 0);
+            else
+                ic.deleteSurroundingText(2, 0);
+        }
+        else if (view.getTag() == null && !((Button) view).getText().equals(null)){
+            InputConnection ic = getCurrentInputConnection();
+            String emoji = ((Button) view).getText().toString();
+            ic.commitText(emoji, 1);
+
+            //if (!recentEmojis.contains(emoji)) {
+                recentEmojis.add(emoji);
+                if (recentEmojis.size() > 36)
+                    recentEmojis.remove(36);
+                kv.updateRecentEmojis(recentEmojis);
+            //}
+
+        }
+        else if (view.getTag().equals("menu_emoji")){
+            kv.setEmojiGrid(view.getId());
+        }
+
     }
 
     public void changeKeyboard(int type) {
         if (keyboardType == EMOJIKEYBOARD) {
             kv.showKeyboard();
-            kv.scrollUp();
         }
         switch (type) {
             case ALTKEYBOARD:
                 keyboard = new Keyboard(this, R.xml.alt_keyboard);
+                kv.scrollUp();
                 break;
             case EMOJIKEYBOARD:
+                kv.setEmojiGrid(R.id.last_emoji);
                 kv.showEmoji();
                 break;
             case ALPHABETKEYBOARD:
             default:
                 keyboard = new Keyboard(this, R.xml.qwertz);
+                kv.scrollUp();
         }
         keyboardType = type;
         kv.getKeyboardView().setKeyboard(keyboard);
