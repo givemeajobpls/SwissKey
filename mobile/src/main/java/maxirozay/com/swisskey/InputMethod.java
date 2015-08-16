@@ -96,18 +96,32 @@ public class InputMethod extends InputMethodService
         String[] lastWords;
         switch(primaryCode) {
             case Keyboard.KEYCODE_SHIFT:
-                capsLock = false;
-                keyboard.getKeys().get(33).icon = getDrawable(R.drawable.sym_keyboard_shift);
-                caps = !caps;
-                keyboard.setShifted(caps);
-                kv.getKeyboardView().invalidateAllKeys();
+                if (!capsLock) {
+                    if (!caps) {
+                        capsLock = false;
+                        caps = !caps;
+                        keyboard.setShifted(caps);
+                        kv.getKeyboardView().invalidateAllKeys();
+                    }
+                    else {
+                        capsLock = true;
+                        keyboard.getKeys().get(23).icon = getDrawable(R.drawable.sym_keyboard_shift_locked);
+                    }
+                }
+                else {
+                    capsLock = false;
+                    keyboard.getKeys().get(23).icon = getDrawable(R.drawable.sym_keyboard_shift);
+                    caps = false;
+                    keyboard.setShifted(caps);
+                    kv.getKeyboardView().invalidateAllKeys();
+                }
+                break;
+            case CAPSLOCK:
+                keyboard.getKeys().get(23).icon = getDrawable(R.drawable.sym_keyboard_shift_locked);
+                capsLock = true;
                 break;
             case Keyboard.KEYCODE_DONE:
                 ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-                break;
-            case CAPSLOCK:
-                keyboard.getKeys().get(33).icon = getDrawable(R.drawable.sym_keyboard_shift_locked);
-                capsLock = true;
                 break;
             case PREDICTION1:
                 ic.commitText(this.keyboard.getKeys().get(0).label, 1);
@@ -130,12 +144,7 @@ public class InputMethod extends InputMethodService
             default:
                 if (keyboardType != EMOJIKEYBOARD) {
                     if (primaryCode == Keyboard.KEYCODE_DELETE){
-                        char last2Char = ic.getTextBeforeCursor(2,
-                                InputConnection.GET_TEXT_WITH_STYLES).charAt(0);
-                        if ((int)last2Char < 0xD83D)    //0xD83D is for 0x1F (beginning of an unicode for emoji)
-                            ic.deleteSurroundingText(1, 0);
-                        else
-                            ic.deleteSurroundingText(2, 0);
+                        deleteLastChar();
                     }
                     else {
                         char code = (char) primaryCode;
@@ -144,9 +153,10 @@ public class InputMethod extends InputMethodService
                         }
                         ic.commitText(String.valueOf(code), 1);
                     }
-                    if (!capsLock) {
+                    if (caps && !capsLock) {
                         caps = false;
                         keyboard.setShifted(caps);
+                        kv.getKeyboardView().invalidateAllKeys();
                     }
 
                     //update predictions
@@ -161,13 +171,11 @@ public class InputMethod extends InputMethodService
                             setPrediction(lastWords[lastWords.length - 1], isFocused);
                         }
                     }
-
                 }
                 else {
                     ic.commitText(keyboard.getKeys().get(0).label.toString(), 1);
                 }
         }
-
     }
 
     @Override
@@ -222,26 +230,16 @@ public class InputMethod extends InputMethodService
         if (view.getId() == R.id.back_to_alphabet)
             changeKeyboard(ALPHABETKEYBOARD);
         else if (view.getId() == R.id.del) {
-            InputConnection ic = getCurrentInputConnection();
-            char last2Char = ic.getTextBeforeCursor(2,
-                    InputConnection.GET_TEXT_WITH_STYLES).charAt(0);
-            if ((int)last2Char < 0xD83D)    //0xD83D is for 0x1F (beginning of an unicode for emoji)
-                ic.deleteSurroundingText(1, 0);
-            else
-                ic.deleteSurroundingText(2, 0);
+            deleteLastChar();
         }
         else if (view.getTag() == null && !((Button) view).getText().equals(null)){
             InputConnection ic = getCurrentInputConnection();
             String emoji = ((Button) view).getText().toString();
             ic.commitText(emoji, 1);
-
-            //if (!recentEmojis.contains(emoji)) {
-                recentEmojis.add(emoji);
-                if (recentEmojis.size() > 36)
-                    recentEmojis.remove(36);
-                kv.updateRecentEmojis(recentEmojis);
-            //}
-
+            recentEmojis.add(emoji);
+            if (recentEmojis.size() > 36)
+                recentEmojis.remove(36);
+            kv.updateRecentEmojis(recentEmojis);
         }
         else if (view.getTag().equals("menu_emoji")){
             kv.setEmojiGrid(view.getId());
@@ -282,5 +280,18 @@ public class InputMethod extends InputMethodService
         kv.getKeyboardView().invalidateKey(0);
         kv.getKeyboardView().invalidateKey(1);
         kv.getKeyboardView().invalidateKey(2);
+    }
+
+    private void deleteLastChar(){
+        InputConnection ic = getCurrentInputConnection();
+        if (ic.getTextBeforeCursor(1,
+                InputConnection.GET_TEXT_WITH_STYLES).length()>0) {
+            char last2Char = ic.getTextBeforeCursor(1,
+                    InputConnection.GET_TEXT_WITH_STYLES).charAt(0);
+            if ((int) last2Char > 0xD83D)    //0xD83D is and up is for emoji
+                ic.deleteSurroundingText(2, 0);
+            else
+                ic.deleteSurroundingText(1, 0);
+        }
     }
 }

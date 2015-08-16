@@ -154,6 +154,7 @@ public class CustomKeyboardView extends LinearLayout{
             i++;
         }
     }
+
     protected void setEmojiGrid(int id) {
         ScrollView scrollView = (ScrollView)findViewById(R.id.emojiGrid);
         scrollView.removeAllViews();
