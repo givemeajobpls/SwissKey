@@ -15,7 +15,7 @@
         android:layout_alignParentBottom="true"
         android:keyPreviewLayout="@layout/preview"
         android:popupLayout="@layout/popup_layout"
-        android:keyBackground="@drawable/key"
+        android:keyBackground="@drawable/blackkey"
         android:background="@drawable/popup_keyboard"
         />
     <ImageButton

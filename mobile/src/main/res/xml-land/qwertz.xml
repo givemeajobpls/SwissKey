@@ -2,9 +2,9 @@
           android:keyWidth="10%p"
           android:horizontalGap="0.1%p"
           android:verticalGap="0.1%p"
-          android:keyHeight="52dp"
+          android:keyHeight="40dp"
     >
-    <Row android:keyHeight="40dp">
+    <Row>
         <Key android:codes="-101" android:keyLabel=" " android:keyWidth="33.3%p"
              android:keyEdgeFlags="left"/>
         <Key android:codes="-102" android:keyLabel=" " android:keyWidth="33.3%p"/>
@@ -60,7 +60,7 @@
              android:keyWidth="20%p" android:isRepeatable="true" android:keyEdgeFlags="right"/>
     </Row>
     <Row android:rowEdgeFlags="bottom">
-        <Key android:codes="-107"  android:keyLabel=":)" android:keyEdgeFlags="left"/>
+        <Key android:codes="-107" android:keyLabel=":)" android:keyEdgeFlags="left"/>
         <Key android:codes="63,33,58" android:keyLabel="\?!:"/>
         <Key android:codes="40,41,47,34" android:keyLabel="()/&quot;" />
         <Key android:codes="35,64,95" android:keyLabel="\#\@_"  />
