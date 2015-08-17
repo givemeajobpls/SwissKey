@@ -5,8 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:background="@drawable/popup_keyboard"
-    android:padding="1dp"
-    >
+    android:padding="1dp">
 
     <android.inputmethodservice.KeyboardView
         android:id="@android:id/keyboardView"

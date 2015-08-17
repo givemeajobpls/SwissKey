@@ -26,8 +26,8 @@ public class CustomKeyboardView extends LinearLayout{
     private ImageButton delButton;
     private GridLayout[] emojiGrid = new GridLayout[5];
     private int[] lastEmojis = new int[36];
-    private int[] humanEmojis = {0x270C, 0x270B, 0x270A, 0x1F440, 0x1F442, 0x1F443, 0x1F444, 0x1F445, 0x1F446, 0x1F447,
-            0x1F448, 0x1F449, 0x1F44A, 0x1F44B};
+    private int[] humanEmojis = {0x270C, 0x270B, 0x270A, 0x1F440, 0x1F442, 0x1F443, 0x1F444,
+            0x1F445, 0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B};
     private int[] natureEmojis = {0x1F30F, 0x1F311, 0x1F313, 0x1F314, 0x1F315, 0x1F319, 0x1F31B,
             0x1F31F, 0x1F320, 0x1F334, 0x1F335, 0x1F339, 0x1F33B, 0x1F33D};
     private int widthEmoji;
@@ -61,7 +61,6 @@ public class CustomKeyboardView extends LinearLayout{
         buttons[4].setText(String.valueOf(Character.toChars(0x1F697)));
         buttons[5] = (Button) findViewById(R.id.back_to_alphabet);
         delButton = (ImageButton) findViewById(R.id.del);
-
     }
 
     public KeyboardView getKeyboardView() {
@@ -79,14 +78,17 @@ public class CustomKeyboardView extends LinearLayout{
     public void setOnClickListener(OnClickListener listener) {
         onClickListener = listener;
     }
+
     public void showEmoji(){
         findViewById(R.id.emojiView).setVisibility(View.VISIBLE);
         findViewById(R.id.keyboardScrollView).setVisibility(View.GONE);
     }
+
     public void showKeyboard(){
         findViewById(R.id.emojiView).setVisibility(View.GONE);
         findViewById(R.id.keyboardScrollView).setVisibility(View.VISIBLE);
     }
+
     public void scrollUp(){
         findViewById(R.id.keyboardScrollView).scrollTo(0, 0);
     }
@@ -94,7 +96,6 @@ public class CustomKeyboardView extends LinearLayout{
     protected void initEmojiGrid(){
         Display display = ((WindowManager) getContext().getSystemService(
                 getContext().WINDOW_SERVICE)).getDefaultDisplay();
-
         int orientation = display.getRotation();
         int col;
         if (orientation == Surface.ROTATION_90 || orientation == Surface.ROTATION_270) {
@@ -123,18 +124,21 @@ public class CustomKeyboardView extends LinearLayout{
         addEmojiList(emojiGrid[4], 0x1F680, 0x1F6C0);
     }
 
+    //add a sequence of emoji/unicode between two unicode value
     private void addEmojiList(GridLayout gridLayout, int from, int to){
         for (int i=from; i < to; i++) {
             addEmojiButton(gridLayout, i);
         }
     }
 
+    //add a list of emoji to a GridLayout
     private void addEmojiList(GridLayout gridLayout, int[] unicodes){
         for (int i=0; i < unicodes.length; i++) {
             addEmojiButton(gridLayout, unicodes[i]);
         }
     }
 
+    //add an emojiButton to a GridLayout
     private void addEmojiButton(GridLayout gridLayout, int unicode){
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.setMargins(1,1,1,1);
@@ -155,11 +159,11 @@ public class CustomKeyboardView extends LinearLayout{
         }
     }
 
+    //set the emoji gridlayout
     protected void setEmojiGrid(int id) {
         ScrollView scrollView = (ScrollView)findViewById(R.id.emojiGrid);
         scrollView.removeAllViews();
         scrollView.scrollTo(0,0);
-
         switch (id) {
             case R.id.emoticons:
                 scrollView.addView(emojiGrid[1]);

@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:weightSum="7"
-        android:background="@drawable/blackkey"
+        android:background="@color/background_material_dark"
         android:layout_margin="1dp">
         <Button
             android:id="@+id/last_emoji"

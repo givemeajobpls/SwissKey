@@ -61,9 +61,9 @@
     </Row>
     <Row android:rowEdgeFlags="bottom">
         <Key android:codes="-107" android:keyLabel=":)" android:keyEdgeFlags="left"/>
-        <Key android:codes="63,33,58" android:keyLabel="\?!:"/>
-        <Key android:codes="40,41,47,34" android:keyLabel="()/&quot;" />
-        <Key android:codes="35,64,95" android:keyLabel="\#\@_"  />
+        <Key android:codes="63,33,41" android:keyLabel="\?!/"/>
+        <Key android:codes="40,47,34" android:keyLabel="()&quot;" />
+        <Key android:codes="35,64,95" android:keyLabel="\#\@"  />
         <Key android:codes="32" android:keyIcon="@drawable/sym_keyboard_space" android:keyWidth="20.1%p"
              android:isRepeatable="true"/>
         <Key android:codes="39,44,45" android:keyLabel="',-" />
